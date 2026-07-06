@@ -50,5 +50,5 @@ Exécuter `supabase_schema.sql` dans l'éditeur SQL du projet Supabase, puis act
 ## Déploiement Railway
 
 Build command : `npm run build`  
-Start command : `npx serve dist --single --listen $PORT`  
+Start command : `npx serve dist`  
 Variables d'env à configurer dans le dashboard Railway.
