@@ -1,0 +1,262 @@
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import GameCard from './GameCard'
+import RunHistory from './RunHistory'
+import VictoryScreen from './VictoryScreen'
+import { useTimer, formatDuration } from '../hooks/useTimer'
+import type { GauntletSession, RunHistory as RunHistoryType } from '../types'
+
+interface Props {
+  session: GauntletSession
+  history: RunHistoryType[]
+  onNextGame: () => void
+  onFailRun: () => void
+  onAdjustTries: (delta: number) => void
+  onReset: () => void
+}
+
+export default function ChallengeMode({ session, history, onNextGame, onFailRun, onAdjustTries, onReset }: Props) {
+  const [confirmReset, setConfirmReset] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
+
+  const totalElapsed = useTimer(session.challenge_started_at)
+  const isCompleted = session.status === 'completed'
+  const currentGame = session.games[session.current_game_index]
+  const totalTries = session.current_run_number - 1
+
+  return (
+    <div className="h-screen flex flex-col overflow-hidden bg-[#0f0f0f]">
+
+      {/* ── HEADER ── */}
+      <header className="flex items-center justify-center border-b border-[#2a2a2a] shrink-0 px-8 py-4">
+        <div className="w-full max-w-7xl flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <h1 className="text-lg font-semibold text-[#e8e8e8] tracking-tight">Gauntlet</h1>
+          <span className="text-sm text-[#6b6b6b]">Run #{session.current_run_number}</span>
+        </div>
+
+        {/* Stats */}
+        <div className="flex items-center gap-6">
+          <Stat label="Essais" value={totalTries.toString()} />
+          <div className="w-px h-5 bg-[#2a2a2a]" />
+          <Stat label="Jeu" value={`${Math.min(session.current_game_index + 1, 10)}/10`} />
+          <div className="w-px h-5 bg-[#2a2a2a]" />
+          <Stat label="Temps" value={formatDuration(totalElapsed)} mono />
+        </div>
+
+        <div className="flex items-center gap-2">
+          {history.length > 0 && (
+            <button
+              onClick={() => setShowHistory(true)}
+              className="text-xs text-[#6b6b6b] hover:text-[#e8e8e8] transition-colors px-2.5 py-1.5 rounded-md border border-transparent hover:border-[#2a2a2a]"
+            >
+              Historique
+            </button>
+          )}
+          <button
+            onClick={() => setConfirmReset(true)}
+            className="text-xs text-[#6b6b6b] hover:text-[#e8e8e8] transition-colors px-2.5 py-1.5 rounded-md border border-transparent hover:border-[#2a2a2a]"
+          >
+            Réinitialiser
+          </button>
+          <button
+            onClick={() => navigator.clipboard.writeText(`${window.location.origin}/obs`)}
+            className="text-xs text-[#f97316] hover:text-[#ea6c10] transition-colors px-2.5 py-1.5 rounded-md border border-[#f97316]/30 hover:border-[#f97316]/60"
+          >
+            OBS
+          </button>
+        </div>
+        </div>
+      </header>
+
+      {/* ── GAME GRID ── */}
+      <main className="flex-1 overflow-hidden flex items-center justify-center py-5 px-8">
+        {isCompleted ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4 }}
+            className="w-full max-w-7xl h-full"
+          >
+            <VictoryScreen
+              totalTries={totalTries}
+              elapsed={totalElapsed}
+              onReset={onReset}
+            />
+          </motion.div>
+        ) : (
+          <div className="grid grid-cols-5 grid-rows-2 gap-3 w-full max-w-7xl" style={{ height: 'min(calc(100vh - 120px), 660px)' }}>
+            {session.games.map((game, i) => {
+              const status =
+                i < session.current_game_index ? 'beaten' :
+                i === session.current_game_index ? 'current' :
+                'pending'
+              return (
+                <GameCard
+                  key={game.rawg_id}
+                  game={game}
+                  index={i}
+                  status={status}
+                  tries={session.game_tries[i] ?? 0}
+                />
+              )
+            })}
+          </div>
+        )}
+      </main>
+
+      {/* ── FOOTER CONTROLS ── */}
+      {!isCompleted && (
+        <footer className="flex items-center justify-center border-t border-[#2a2a2a] shrink-0 px-8 py-4">
+        <div className="w-full max-w-7xl flex items-center justify-between">
+          {/* Current game name */}
+          <div className="flex items-center gap-2 min-w-0 w-52">
+            <div className="w-1.5 h-1.5 rounded-full bg-[#f97316] shrink-0 animate-pulse" />
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={session.current_game_index}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.2 }}
+                className="text-sm text-[#e8e8e8] font-medium truncate"
+              >
+                {currentGame?.name}
+              </motion.span>
+            </AnimatePresence>
+          </div>
+
+          {/* Try counter */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => onAdjustTries(-1)}
+              className="w-7 h-7 rounded-md border border-[#2a2a2a] text-[#6b6b6b] hover:text-[#e8e8e8] hover:border-[#6b6b6b] transition-colors flex items-center justify-center text-base font-light"
+            >
+              −
+            </button>
+            <div className="relative w-12 h-8 flex items-center justify-center overflow-hidden">
+              <AnimatePresence mode="popLayout">
+                <motion.span
+                  key={totalTries}
+                  initial={{ y: 16, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: -16, opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                  className="absolute text-2xl font-bold text-[#e8e8e8] tabular-nums"
+                >
+                  {totalTries}
+                </motion.span>
+              </AnimatePresence>
+            </div>
+            <button
+              onClick={() => onAdjustTries(1)}
+              className="w-7 h-7 rounded-md border border-[#2a2a2a] text-[#6b6b6b] hover:text-[#e8e8e8] hover:border-[#6b6b6b] transition-colors flex items-center justify-center text-base font-light"
+            >
+              +
+            </button>
+            <span className="text-xs text-[#6b6b6b]">essais</span>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-2">
+            <motion.button
+              onClick={onFailRun}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.97 }}
+              className="px-4 py-2 rounded-lg border border-[#2a2a2a] text-[#e8e8e8] text-sm font-medium hover:bg-[#1a1a1a] transition-colors"
+            >
+              On a perdu
+            </motion.button>
+            <motion.button
+              onClick={onNextGame}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.97 }}
+              className="px-5 py-2 rounded-lg bg-[#f97316] text-white text-sm font-medium hover:bg-[#ea6c10] transition-colors"
+            >
+              Jeu suivant ✓
+            </motion.button>
+          </div>
+        </div>
+        </footer>
+      )}
+
+      {/* ── HISTORY MODAL ──�� */}
+      <AnimatePresence>
+        {showHistory && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowHistory(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-6 max-w-lg w-full max-h-[70vh] overflow-y-auto space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-[#e8e8e8]">Historique des runs</p>
+                <button onClick={() => setShowHistory(false)} className="text-[#6b6b6b] hover:text-[#e8e8e8] transition-colors">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <RunHistory history={history} session={session} />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── RESET CONFIRM ── */}
+      <AnimatePresence>
+        {confirmReset && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+            onClick={() => setConfirmReset(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-6 max-w-sm w-full space-y-4"
+            >
+              <p className="text-sm font-semibold text-[#e8e8e8]">Réinitialiser le challenge ?</p>
+              <p className="text-sm text-[#6b6b6b]">Tous les essais et l'historique seront effacés. La liste de jeux est conservée.</p>
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => { onReset(); setConfirmReset(false) }}
+                  className="flex-1 py-2 rounded-lg bg-[#f97316] text-white text-sm font-medium hover:bg-[#ea6c10] transition-colors"
+                >
+                  Réinitialiser
+                </button>
+                <button
+                  onClick={() => setConfirmReset(false)}
+                  className="flex-1 py-2 rounded-lg border border-[#2a2a2a] text-[#e8e8e8] text-sm hover:bg-[#2a2a2a] transition-colors"
+                >
+                  Annuler
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function Stat({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-[#6b6b6b]">{label}</span>
+      <span className={`text-sm font-semibold text-[#e8e8e8] ${mono ? 'tabular-nums' : ''}`}>{value}</span>
+    </div>
+  )
+}
