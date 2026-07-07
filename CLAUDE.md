@@ -53,6 +53,8 @@ Exécuter `supabase_schema.sql` dans l'éditeur SQL du projet Supabase, puis act
 
 **Meilleure run** — `getBestGamesBeaten` (`src/lib/bestRun.ts`) prend le max entre l'historique des runs et la progression de la run en cours.
 
+**Points de progression (overlay OBS)** — un point par jeu, coloré par priorité : vert si battu dans la run en cours, blanc pour le jeu en cours, jaune pour le jeu correspondant à la meilleure run (`bestGamesBeaten - 1`) tant qu'il n'a pas été rattrapé, gris sinon. Sur le site (`GameCard`), les jeux battus restent en vert (`emerald`), indépendant de la palette de l'overlay.
+
 ## Déploiement Railway
 
 Build command : `npm run build`  

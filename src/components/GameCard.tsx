@@ -37,7 +37,7 @@ export default function GameCard({ game, index, status, tries }: Props) {
       {/* Base gradient */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-black/10" />
 
-      {/* Beaten green overlay */}
+      {/* Beaten overlay */}
       {status === 'beaten' && (
         <motion.div
           initial={{ opacity: 0 }}

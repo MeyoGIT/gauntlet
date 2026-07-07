@@ -168,50 +168,54 @@ export default function OBS() {
                 <div className="rounded-lg bg-white/10 shrink-0" style={{ width: 120, height: 84 }} />
               )}
 
-              <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-[20px] font-bold text-white leading-snug line-clamp-1 flex-1 min-w-0">
+              <div className="flex-1 min-w-0 flex items-stretch justify-between gap-3">
+                <div className="min-w-0 flex flex-col justify-between">
+                  <p className="text-[20px] font-bold text-white leading-snug line-clamp-1">
                     {currentGame.name}
                   </p>
-                  <div className="flex items-center gap-1 text-white/50 shrink-0 mt-0.5">
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-lg text-white/50 font-semibold tabular-nums">
+                      {session.current_game_index + 1}/{session.games.length}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {session.games.map((_, i) => (
+                        <div
+                          key={i}
+                          className="rounded-full transition-all duration-300"
+                          style={{
+                            width: 12, height: 12,
+                            background:
+                              i < session.current_game_index ? '#22c55e' :
+                              i === session.current_game_index ? '#ffffff' :
+                              i === bestGamesBeaten - 1 ? '#eab308' :
+                              'rgba(255,255,255,0.18)',
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-start gap-1.5 shrink-0 mt-0.5">
+                  <div className="flex items-center gap-1.5 text-white/50">
+                    <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
                     </svg>
                     <span className="text-sm tabular-nums font-medium">{formatDuration(elapsed)}</span>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-white/50 font-medium tabular-nums">
-                    {session.current_game_index + 1}/{session.games.length}
-                  </span>
-                  <span className="text-white/20">·</span>
-                  <span className="text-sm text-white/50 font-medium tabular-nums">
-                    Record {bestGamesBeaten}/{session.games.length}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1.5">
-                    {session.games.map((_, i) => (
-                      <div
-                        key={i}
-                        className="rounded-full transition-all duration-300"
-                        style={{
-                          width: 8, height: 8,
-                          background:
-                            i < session.current_game_index ? '#f97316' :
-                            i === session.current_game_index ? '#ffffff' :
-                            'rgba(255,255,255,0.18)',
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-1 text-white/50 ml-auto shrink-0">
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <div className="h-px w-full bg-white/10" />
+                  <div className="flex items-center gap-1.5 text-white/50">
+                    <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
                     <span className="text-sm tabular-nums font-medium">Run n°{session.current_run_number}</span>
+                  </div>
+                  <div className="h-px w-full bg-white/10" />
+                  <div className="flex items-center gap-1.5 text-white/50">
+                    <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path d="M6 9H4.5a2.5 2.5 0 010-5H6M18 9h1.5a2.5 2.5 0 000-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0012 0V2z" />
+                    </svg>
+                    <span className="text-sm tabular-nums font-medium">Best : {bestGamesBeaten}/{session.games.length}</span>
                   </div>
                 </div>
               </div>
