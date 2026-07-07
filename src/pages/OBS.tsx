@@ -1,11 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../lib/supabase'
 import { useTimer, formatDuration } from '../hooks/useTimer'
-import type { GauntletSession } from '../types'
+import { useActionFeedback } from '../hooks/useActionFeedback'
+import { getBestGamesBeaten } from '../lib/bestRun'
+import { FeedbackContent } from '../components/ActionFeedback'
+import type { GauntletSession, RunHistory } from '../types'
 
 export default function OBS() {
   const [session, setSession] = useState<GauntletSession | null>(null)
+  const [history, setHistory] = useState<RunHistory[]>([])
+  const { feedback, triggerFeedback } = useActionFeedback()
+  const sessionRef = useRef<GauntletSession | null>(null)
+
+  useEffect(() => { sessionRef.current = session }, [session])
 
   // Override global body background so OBS Browser Source transparency works
   useEffect(() => {
@@ -19,31 +27,70 @@ export default function OBS() {
 
   useEffect(() => {
     let cancelled = false
+    let channel: ReturnType<typeof supabase.channel> | null = null
 
-    supabase
-      .from('gauntlet_sessions')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!cancelled && data) setSession(data as GauntletSession)
-      })
+    async function init() {
+      const { data } = await supabase
+        .from('gauntlet_sessions')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
-    const channel = supabase
-      .channel('gauntlet-obs')
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'gauntlet_sessions',
-      }, (payload) => {
-        setSession(payload.new as GauntletSession)
-      })
-      .subscribe()
+      if (cancelled || !data) return
+      const s = data as GauntletSession
+      setSession(s)
+
+      const { data: historyData } = await supabase
+        .from('run_history')
+        .select('*')
+        .eq('session_id', s.id)
+      if (!cancelled && historyData) setHistory(historyData as RunHistory[])
+
+      channel = supabase
+        .channel('gauntlet-obs')
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'gauntlet_sessions',
+          filter: `id=eq.${s.id}`,
+        }, (payload) => {
+          const updated = payload.new as GauntletSession
+          const prev = sessionRef.current
+
+          // A failed run is the only action that bumps current_run_started_at
+          // while also increasing current_run_number (a manual tries
+          // adjustment only touches the latter); a rising game index means
+          // the current game was beaten.
+          if (prev) {
+            if (
+              updated.current_run_started_at !== prev.current_run_started_at &&
+              updated.current_run_number > prev.current_run_number
+            ) {
+              triggerFeedback('fail')
+            } else if (updated.current_game_index > prev.current_game_index) {
+              triggerFeedback('success')
+            }
+          }
+
+          setSession(updated)
+
+          // run_history isn't on the realtime publication, so re-fetch it
+          // here to keep the history list and "Meilleure run" stat in sync.
+          supabase
+            .from('run_history')
+            .select('*')
+            .eq('session_id', updated.id)
+            .then(({ data }) => setHistory((data as RunHistory[] | null) ?? []))
+        })
+        .subscribe()
+    }
+
+    init()
 
     return () => {
       cancelled = true
-      channel.unsubscribe()
+      channel?.unsubscribe()
     }
   }, [])
 
@@ -53,20 +100,27 @@ export default function OBS() {
 
   const currentGame = session.games[session.current_game_index]
   const isCompleted = session.status === 'completed'
+  const bestGamesBeaten = getBestGamesBeaten(session, history)
+  const isFeedback = feedback !== null
 
   return (
     <div style={{ background: 'transparent' }} className="p-3 inline-block">
       <AnimatePresence mode="wait">
         <motion.div
-          key={isCompleted ? 'completed' : session.current_game_index}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
-          className="inline-flex items-center gap-5 rounded-2xl px-5 py-4"
-          style={{ width: 520, backgroundColor: 'rgba(10, 10, 10, 0.92)' }}
+          key={feedback ? `feedback-${feedback.id}` : isCompleted ? 'completed' : session.current_game_index}
+          initial={isFeedback ? { opacity: 1 } : { opacity: 0, y: 10 }}
+          animate={
+            isFeedback
+              ? { opacity: 1 }
+              : { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } }
+          }
+          exit={{ opacity: 0, transition: { duration: 0 } }}
+          className="inline-flex items-center justify-center gap-5 rounded-2xl px-5 py-4"
+          style={{ width: 520, backgroundColor: feedback ? '#000' : 'rgba(10, 10, 10, 0.92)' }}
         >
-          {isCompleted ? (
+          {feedback ? (
+            <FeedbackContent type={feedback.type} compact />
+          ) : isCompleted ? (
             <div className="flex items-center gap-5 w-full">
               <motion.div
                 initial={{ scale: 0 }}
@@ -127,9 +181,15 @@ export default function OBS() {
                   </div>
                 </div>
 
-                <span className="text-sm text-white/50 font-medium tabular-nums">
-                  {session.current_game_index + 1}/{session.games.length}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-white/50 font-medium tabular-nums">
+                    {session.current_game_index + 1}/{session.games.length}
+                  </span>
+                  <span className="text-white/20">·</span>
+                  <span className="text-sm text-white/50 font-medium tabular-nums">
+                    Record {bestGamesBeaten}/{session.games.length}
+                  </span>
+                </div>
 
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1.5">

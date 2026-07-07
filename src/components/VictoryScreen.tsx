@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { formatDuration } from '../hooks/useTimer'
+import AdminOnly from './AdminOnly'
 
 interface Props {
   totalTries: number
@@ -70,14 +71,16 @@ export default function VictoryScreen({ totalTries, elapsed, onReset }: Props) {
         </motion.div>
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.75 }}>
-          <motion.button
-            onClick={onReset}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            className="px-6 py-2.5 rounded-lg border border-[#2a2a2a] text-sm text-[#6b6b6b] hover:text-[#e8e8e8] hover:border-[#6b6b6b] transition-colors"
-          >
-            Nouvelle session
-          </motion.button>
+          <AdminOnly>
+            <motion.button
+              onClick={onReset}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              className="px-6 py-2.5 rounded-lg border border-[#2a2a2a] text-sm text-[#6b6b6b] hover:text-[#e8e8e8] hover:border-[#6b6b6b] transition-colors"
+            >
+              Nouvelle session
+            </motion.button>
+          </AdminOnly>
         </motion.div>
       </div>
     </div>

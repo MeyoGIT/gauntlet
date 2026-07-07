@@ -2,6 +2,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useGauntlet } from '../hooks/useGauntlet'
 import SetupMode from '../components/SetupMode'
 import ChallengeMode from '../components/ChallengeMode'
+import AdminButton from '../components/AdminButton'
+import AdminModal from '../components/AdminModal'
+import AdminOnly from '../components/AdminOnly'
 
 export default function Home() {
   const {
@@ -43,27 +46,35 @@ export default function Home() {
 
   if (!session) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="text-center space-y-6 max-w-sm">
-          <div>
-            <h1 className="text-3xl font-bold text-[#e8e8e8] tracking-tight">Gauntlet</h1>
-            <p className="text-sm text-[#6b6b6b] mt-2">10 jeux. 0 défaite. Le challenge en duo ultime.</p>
+      <>
+        <AdminButton />
+        <AdminModal />
+        <div className="min-h-screen flex items-center justify-center px-4">
+          <div className="text-center space-y-6 max-w-sm">
+            <div>
+              <h1 className="text-3xl font-bold text-[#e8e8e8] tracking-tight">Gauntlet</h1>
+              <p className="text-sm text-[#6b6b6b] mt-2">10 jeux. 0 défaite. Le challenge en duo ultime.</p>
+            </div>
+            <AdminOnly>
+              <motion.button
+                onClick={createSession}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                className="w-full py-3 rounded-lg bg-[#f97316] text-white text-sm font-medium hover:bg-[#ea6c10] transition-colors"
+              >
+                Créer une session
+              </motion.button>
+            </AdminOnly>
           </div>
-          <motion.button
-            onClick={createSession}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            className="w-full py-3 rounded-lg bg-[#f97316] text-white text-sm font-medium hover:bg-[#ea6c10] transition-colors"
-          >
-            Créer une session
-          </motion.button>
         </div>
-      </div>
+      </>
     )
   }
 
   return (
     <div className="min-h-screen bg-[#0f0f0f]">
+      <AdminButton />
+      <AdminModal />
       <AnimatePresence mode="wait">
         {session.status === 'setup' ? (
           <motion.div

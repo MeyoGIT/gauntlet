@@ -49,6 +49,9 @@ CREATE POLICY "Public read run_history"
 CREATE POLICY "Public insert run_history"
   ON run_history FOR INSERT WITH CHECK (true);
 
+CREATE POLICY "Public delete run_history"
+  ON run_history FOR DELETE USING (true);
+
 -- Activer le Realtime sur gauntlet_sessions
 -- (à faire aussi dans le dashboard Supabase : Database > Replication > gauntlet_sessions)
 ALTER PUBLICATION supabase_realtime ADD TABLE gauntlet_sessions;

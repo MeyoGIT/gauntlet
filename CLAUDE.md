@@ -25,18 +25,18 @@ Créer `.env` à partir de `.env.example` :
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
 VITE_RAWG_API_KEY=
-VITE_APP_PASSWORD=      # optionnel — si vide, pas de mot de passe
+VITE_APP_PASSWORD=      # optionnel — si vide, tout le monde est admin
 ```
 
 ## Supabase
 
-Exécuter `supabase_schema.sql` dans l'éditeur SQL du projet Supabase, puis activer le Realtime sur la table `gauntlet_sessions` (Database → Replication).
+Exécuter `supabase_schema.sql` dans l'éditeur SQL du projet Supabase, puis activer le Realtime sur la table `gauntlet_sessions` uniquement (Database → Replication). `run_history` n'a pas besoin d'être publiée : `/obs` la refetch manuellement plutôt que de s'y abonner (voir Realtime ci-dessous).
 
 ## Pages
 
 | Route | Description |
 |-------|-------------|
-| `/` | Interface principale — protégée par mot de passe si `VITE_APP_PASSWORD` est défini |
+| `/` | Interface principale — accessible à tous en lecture seule ; le mode admin (modifications) se déverrouille via le bouton en haut à droite |
 | `/obs` | Overlay OBS, fond transparent, ajouter comme Browser Source (pas de mot de passe) |
 
 ## Architecture
@@ -45,7 +45,13 @@ Exécuter `supabase_schema.sql` dans l'éditeur SQL du projet Supabase, puis act
 
 **États de la session** : `setup` → `active` → `completed`
 
-**Realtime** : subscription Supabase sur `postgres_changes` UPDATE, gérée via `channelRef` dans `useGauntlet` pour éviter les leaks.
+**Mode admin / spectateur** — `AdminProvider` (`src/contexts/AdminContext.tsx`) expose `isAdmin`, persisté en `sessionStorage`. Si `VITE_APP_PASSWORD` est vide, tout le monde est admin. `AdminOnly` (`src/components/AdminOnly.tsx`) ne rend ses enfants que pour les admins — les contrôles de modification sont absents du DOM pour les spectateurs, pas juste désactivés. `AdminButton` (coin haut-droit, sur toutes les pages) ouvre `AdminModal` pour se connecter/déconnecter.
+
+**Realtime** : subscription Supabase sur `postgres_changes` UPDATE de `gauntlet_sessions`, gérée via `channelRef` dans `useGauntlet` pour éviter les leaks. `run_history` n'étant pas sur la publication Realtime, `/obs` la refetch manuellement à chaque UPDATE de session au lieu de s'y abonner directement.
+
+**Feedback visuel ("Jeu battu !" / "Perdu !")** — `useActionFeedback` (`src/hooks/useActionFeedback.ts`) pilote un état `{ type, id }` affiché ~1s via `ActionFeedback`. Sur le site, déclenché directement au clic (`ChallengeMode`). Sur `/obs`, déduit en comparant la session avant/après dans le handler Realtime : une run échouée est la seule action qui change `current_run_started_at` en augmentant `current_run_number` (un ajustement manuel des essais ne touche que le second) ; un `current_game_index` qui augmente signale un jeu battu.
+
+**Meilleure run** — `getBestGamesBeaten` (`src/lib/bestRun.ts`) prend le max entre l'historique des runs et la progression de la run en cours.
 
 ## Déploiement Railway
 

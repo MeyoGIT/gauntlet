@@ -160,6 +160,7 @@ export function useGauntlet() {
 
   const resetChallenge = useCallback(async () => {
     if (!session) return
+    await supabase.from('run_history').delete().eq('session_id', session.id)
     await updateSession({
       status: 'setup',
       current_run_number: 1,

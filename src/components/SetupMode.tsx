@@ -1,5 +1,6 @@
 import { Reorder, useDragControls, motion, AnimatePresence } from 'framer-motion'
 import GameSearch from './GameSearch'
+import AdminOnly from './AdminOnly'
 import type { Game } from '../types'
 
 interface Props {
@@ -40,7 +41,9 @@ function GameItem({ game, index, onRemove }: { game: Game; index: number; onRemo
       layout
       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
     >
-      <DragHandle controls={controls} />
+      <AdminOnly>
+        <DragHandle controls={controls} />
+      </AdminOnly>
       <span className="text-xs font-medium text-[#6b6b6b] w-5 text-center">{index + 1}</span>
       {game.cover_url ? (
         <img src={game.cover_url} alt={game.name} className="w-9 h-6 object-cover rounded shrink-0" />
@@ -48,15 +51,17 @@ function GameItem({ game, index, onRemove }: { game: Game; index: number; onRemo
         <div className="w-9 h-6 bg-[#2a2a2a] rounded shrink-0" />
       )}
       <span className="flex-1 text-sm text-[#e8e8e8] truncate">{game.name}</span>
-      <button
-        onClick={onRemove}
-        className="text-[#6b6b6b] hover:text-[#e8e8e8] transition-colors p-1"
-        aria-label="Supprimer"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-          <path d="M18 6L6 18M6 6l12 12" />
-        </svg>
-      </button>
+      <AdminOnly>
+        <button
+          onClick={onRemove}
+          className="text-[#6b6b6b] hover:text-[#e8e8e8] transition-colors p-1"
+          aria-label="Supprimer"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </AdminOnly>
     </Reorder.Item>
   )
 }
@@ -83,10 +88,12 @@ export default function SetupMode({ games, onGamesChange, onStart }: Props) {
       </div>
 
       <div className="space-y-3">
-        <GameSearch
-          currentGames={games}
-          onAdd={g => onGamesChange([...games, { ...g, position: games.length }])}
-        />
+        <AdminOnly>
+          <GameSearch
+            currentGames={games}
+            onAdd={g => onGamesChange([...games, { ...g, position: games.length }])}
+          />
+        </AdminOnly>
 
         <div className="flex items-center justify-between">
           <span className="text-xs text-[#6b6b6b]">{games.length}/10 jeux</span>
@@ -128,19 +135,21 @@ export default function SetupMode({ games, onGamesChange, onStart }: Props) {
         </AnimatePresence>
       </div>
 
-      <motion.button
-        onClick={onStart}
-        disabled={!ready}
-        whileHover={ready ? { scale: 1.01 } : {}}
-        whileTap={ready ? { scale: 0.98 } : {}}
-        className={`w-full py-3 rounded-lg text-sm font-medium transition-colors ${
-          ready
-            ? 'bg-[#f97316] text-white hover:bg-[#ea6c10]'
-            : 'bg-[#1a1a1a] text-[#6b6b6b] border border-[#2a2a2a] cursor-not-allowed'
-        }`}
-      >
-        {ready ? 'Lancer le challenge →' : `Encore ${10 - games.length} jeu${10 - games.length > 1 ? 'x' : ''} à ajouter`}
-      </motion.button>
+      <AdminOnly>
+        <motion.button
+          onClick={onStart}
+          disabled={!ready}
+          whileHover={ready ? { scale: 1.01 } : {}}
+          whileTap={ready ? { scale: 0.98 } : {}}
+          className={`w-full py-3 rounded-lg text-sm font-medium transition-colors ${
+            ready
+              ? 'bg-[#f97316] text-white hover:bg-[#ea6c10]'
+              : 'bg-[#1a1a1a] text-[#6b6b6b] border border-[#2a2a2a] cursor-not-allowed'
+          }`}
+        >
+          {ready ? 'Lancer le challenge →' : `Encore ${10 - games.length} jeu${10 - games.length > 1 ? 'x' : ''} à ajouter`}
+        </motion.button>
+      </AdminOnly>
     </div>
   )
 }
