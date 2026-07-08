@@ -15,6 +15,7 @@ export interface GauntletSession {
   current_game_index: number
   challenge_started_at: string | null
   current_run_started_at: string | null
+  current_game_started_at: string | null
   game_tries: number[]
   created_at: string
 }
@@ -27,6 +28,21 @@ export interface RunHistory {
   ended_at: string
   failed_at_game_index: number | null
   games_beaten: number
+  duration_seconds: number
+}
+
+export type GameAttemptResult = 'beaten' | 'failed'
+
+export interface GameAttempt {
+  id: string
+  session_id: string
+  run_number: number
+  game_index: number
+  rawg_id: number
+  game_name: string
+  result: GameAttemptResult
+  started_at: string
+  ended_at: string
   duration_seconds: number
 }
 

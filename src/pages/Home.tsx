@@ -10,6 +10,7 @@ export default function Home() {
   const {
     session,
     history,
+    gameAttempts,
     loading,
     error,
     createSession,
@@ -101,6 +102,7 @@ export default function Home() {
             <ChallengeMode
               session={session}
               history={history}
+              gameAttempts={gameAttempts}
               onNextGame={nextGame}
               onFailRun={failRun}
               onAdjustTries={adjustTries}

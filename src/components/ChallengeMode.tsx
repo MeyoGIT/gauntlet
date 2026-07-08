@@ -5,23 +5,26 @@ import RunHistory from './RunHistory'
 import VictoryScreen from './VictoryScreen'
 import AdminOnly from './AdminOnly'
 import ActionFeedback from './ActionFeedback'
+import StatsModal from './StatsModal'
 import { useTimer, formatDuration } from '../hooks/useTimer'
 import { useActionFeedback } from '../hooks/useActionFeedback'
 import { getBestGamesBeaten } from '../lib/bestRun'
-import type { GauntletSession, RunHistory as RunHistoryType } from '../types'
+import type { GauntletSession, RunHistory as RunHistoryType, GameAttempt } from '../types'
 
 interface Props {
   session: GauntletSession
   history: RunHistoryType[]
+  gameAttempts: GameAttempt[]
   onNextGame: () => void
   onFailRun: () => void
   onAdjustTries: (delta: number) => void
   onReset: () => void
 }
 
-export default function ChallengeMode({ session, history, onNextGame, onFailRun, onAdjustTries, onReset }: Props) {
+export default function ChallengeMode({ session, history, gameAttempts, onNextGame, onFailRun, onAdjustTries, onReset }: Props) {
   const [confirmReset, setConfirmReset] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
+  const [showStats, setShowStats] = useState(false)
   const [obsCopied, setObsCopied] = useState(false)
   const { feedback, triggerFeedback } = useActionFeedback()
   const gridControls = useAnimationControls()
@@ -75,6 +78,15 @@ export default function ChallengeMode({ session, history, onNextGame, onFailRun,
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowStats(true)}
+            className="flex items-center gap-1.5 text-xs text-[#6b6b6b] hover:text-[#e8e8e8] transition-colors px-2.5 py-1.5 rounded-md border border-transparent hover:border-[#2a2a2a]"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.5h3.75v6.75H3v-6.75zm7.125-4.5h3.75v11.25h-3.75V9zm7.125-5.25H21v16.5h-3.75V3.75z" />
+            </svg>
+            Stats
+          </button>
           {history.length > 0 && (
             <button
               onClick={() => setShowHistory(true)}
@@ -179,6 +191,14 @@ export default function ChallengeMode({ session, history, onNextGame, onFailRun,
       </main>
 
       <ActionFeedback feedback={feedback} />
+
+      <StatsModal
+        open={showStats}
+        onClose={() => setShowStats(false)}
+        session={session}
+        history={history}
+        gameAttempts={gameAttempts}
+      />
 
       {/* ── FOOTER CONTROLS (admin only) ── */}
       {!isCompleted && (

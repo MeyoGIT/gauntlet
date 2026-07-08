@@ -55,6 +55,8 @@ Exécuter `supabase_schema.sql` dans l'éditeur SQL du projet Supabase, puis act
 
 **Points de progression (overlay OBS)** — un point par jeu, coloré par priorité : vert si battu dans la run en cours, blanc pour le jeu en cours, jaune pour le jeu correspondant à la meilleure run (`bestGamesBeaten - 1`) tant qu'il n'a pas été rattrapé, gris sinon. Sur le site (`GameCard`), les jeux battus restent en vert (`emerald`), indépendant de la palette de l'overlay.
 
+**Statistiques** — bouton "Stats" dans `ChallengeMode` ouvrant `StatsModal`, alimenté par la table `game_attempts` (une ligne par tentative sur un jeu, battue ou ratée, avec durée exacte). `useGauntlet` pose un timestamp `current_game_started_at` sur la session à chaque transition de jeu (début de run, jeu battu, échec) et l'utilise comme point de départ pour calculer la durée de la tentative en cours avant d'insérer la ligne dans `game_attempts`. `src/lib/stats.ts` dérive les stats par jeu (essais, victoires/défaites, ratio, temps total, clear le plus rapide) et les records globaux (jeu le plus chronophage, bête noire, etc.) à partir de `game_attempts` + `run_history`. Les sessions créées avant l'ajout de cette table n'ont pas d'historique par jeu tant que la migration SQL n'a pas été rejouée dans Supabase.
+
 ## Déploiement Railway
 
 Build command : `npm run build`  
