@@ -12,12 +12,16 @@ CREATE TABLE IF NOT EXISTS gauntlet_sessions (
   current_run_started_at TIMESTAMPTZ,
   game_tries            JSONB NOT NULL DEFAULT '[0,0,0,0,0,0,0,0,0,0]',
   current_game_started_at TIMESTAMPTZ,
+  paused_at             TIMESTAMPTZ,
   created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Migration : si la table existe déjà sans cette colonne (session créée avant
 -- l'ajout des statistiques par jeu), l'ajouter sans casser les données existantes.
 ALTER TABLE gauntlet_sessions ADD COLUMN IF NOT EXISTS current_game_started_at TIMESTAMPTZ;
+
+-- Migration : pause du chrono. NULL = pas en pause ; sinon horodatage du début de la pause.
+ALTER TABLE gauntlet_sessions ADD COLUMN IF NOT EXISTS paused_at TIMESTAMPTZ;
 
 -- Table historique : un enregistrement par run terminé (victoire ou échec)
 CREATE TABLE IF NOT EXISTS run_history (

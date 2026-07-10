@@ -19,9 +19,10 @@ interface Props {
   onFailRun: () => void
   onAdjustTries: (delta: number) => void
   onReset: () => void
+  onTogglePause: () => void
 }
 
-export default function ChallengeMode({ session, history, gameAttempts, onNextGame, onFailRun, onAdjustTries, onReset }: Props) {
+export default function ChallengeMode({ session, history, gameAttempts, onNextGame, onFailRun, onAdjustTries, onReset, onTogglePause }: Props) {
   const [confirmReset, setConfirmReset] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [showStats, setShowStats] = useState(false)
@@ -49,7 +50,8 @@ export default function ChallengeMode({ session, history, gameAttempts, onNextGa
     onNextGame()
   }
 
-  const totalElapsed = useTimer(session.challenge_started_at)
+  const isPaused = !!session.paused_at
+  const totalElapsed = useTimer(session.challenge_started_at, session.paused_at)
   const isCompleted = session.status === 'completed'
   const currentGame = session.games[session.current_game_index]
   const totalTries = session.current_run_number - 1
@@ -64,6 +66,16 @@ export default function ChallengeMode({ session, history, gameAttempts, onNextGa
         <div className="flex items-center gap-4">
           <h1 className="text-lg font-semibold text-[#e8e8e8] tracking-tight">Gauntlet</h1>
           <span className="text-sm text-[#6b6b6b]">Run #{session.current_run_number}</span>
+          {isPaused && (
+            <motion.span
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex items-center gap-1.5 text-xs font-semibold text-yellow-400 bg-yellow-400/10 border border-yellow-400/30 px-2 py-0.5 rounded-full"
+            >
+              <PauseIcon className="w-3 h-3" />
+              En pause
+            </motion.span>
+          )}
         </div>
 
         {/* Stats */}
@@ -87,14 +99,12 @@ export default function ChallengeMode({ session, history, gameAttempts, onNextGa
             </svg>
             Stats
           </button>
-          {history.length > 0 && (
-            <button
-              onClick={() => setShowHistory(true)}
-              className="text-xs text-[#6b6b6b] hover:text-[#e8e8e8] transition-colors px-2.5 py-1.5 rounded-md border border-transparent hover:border-[#2a2a2a]"
-            >
-              Historique
-            </button>
-          )}
+          <button
+            onClick={() => setShowHistory(true)}
+            className="text-xs text-[#6b6b6b] hover:text-[#e8e8e8] transition-colors px-2.5 py-1.5 rounded-md border border-transparent hover:border-[#2a2a2a]"
+          >
+            Historique
+          </button>
           <AdminOnly>
             <button
               onClick={() => setConfirmReset(true)}
@@ -166,27 +176,43 @@ export default function ChallengeMode({ session, history, gameAttempts, onNextGa
             />
           </motion.div>
         ) : (
-          <motion.div
-            animate={gridControls}
-            className="grid grid-cols-5 grid-rows-2 gap-3 w-full max-w-7xl"
-            style={{ height: 'min(calc(100vh - 120px), 660px)' }}
-          >
-            {session.games.map((game, i) => {
-              const status =
-                i < session.current_game_index ? 'beaten' :
-                i === session.current_game_index ? 'current' :
-                'pending'
-              return (
-                <GameCard
-                  key={game.rawg_id}
-                  game={game}
-                  index={i}
-                  status={status}
-                  tries={session.game_tries[i] ?? 0}
-                />
-              )
-            })}
-          </motion.div>
+          <div className="relative w-full max-w-7xl" style={{ height: 'min(calc(100vh - 120px), 660px)' }}>
+            <motion.div
+              animate={gridControls}
+              className="grid grid-cols-5 grid-rows-2 gap-3 w-full h-full"
+            >
+              {session.games.map((game, i) => {
+                const status =
+                  i < session.current_game_index ? 'beaten' :
+                  i === session.current_game_index ? 'current' :
+                  'pending'
+                return (
+                  <GameCard
+                    key={game.rawg_id}
+                    game={game}
+                    index={i}
+                    status={status}
+                    tries={session.game_tries[i] ?? 0}
+                  />
+                )
+              })}
+            </motion.div>
+
+            <AnimatePresence>
+              {isPaused && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute inset-0 flex items-center justify-center gap-3 bg-black/70 rounded-xl backdrop-blur-sm pointer-events-none"
+                >
+                  <PauseIcon className="w-8 h-8 text-yellow-400" />
+                  <span className="text-2xl font-bold tracking-tight text-[#e8e8e8]">En pause</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         )}
       </main>
 
@@ -256,18 +282,36 @@ export default function ChallengeMode({ session, history, gameAttempts, onNextGa
             {/* Action buttons */}
             <div className="flex items-center gap-2">
               <motion.button
-                onClick={handleFailRun}
+                onClick={onTogglePause}
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.97 }}
-                className="px-4 py-2 rounded-lg border border-[#2a2a2a] text-[#e8e8e8] text-sm font-medium hover:bg-[#1a1a1a] transition-colors"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                  isPaused
+                    ? 'border-yellow-400/40 text-yellow-400 hover:bg-yellow-400/10'
+                    : 'border-[#2a2a2a] text-[#6b6b6b] hover:text-[#e8e8e8] hover:border-[#6b6b6b]'
+                }`}
+              >
+                {isPaused ? <PlayIcon className="w-3.5 h-3.5" /> : <PauseIcon className="w-3.5 h-3.5" />}
+                {isPaused ? 'Reprendre' : 'Pause'}
+              </motion.button>
+
+              <div className="w-px h-6 bg-[#2a2a2a]" />
+
+              <motion.button
+                onClick={handleFailRun}
+                disabled={isPaused}
+                whileHover={isPaused ? {} : { scale: 1.01 }}
+                whileTap={isPaused ? {} : { scale: 0.97 }}
+                className="px-4 py-2 rounded-lg border border-[#2a2a2a] text-[#e8e8e8] text-sm font-medium hover:bg-[#1a1a1a] transition-colors disabled:opacity-40 disabled:pointer-events-none"
               >
                 On a perdu
               </motion.button>
               <motion.button
                 onClick={handleNextGame}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.97 }}
-                className="px-5 py-2 rounded-lg bg-[#f97316] text-white text-sm font-medium hover:bg-[#ea6c10] transition-colors"
+                disabled={isPaused}
+                whileHover={isPaused ? {} : { scale: 1.01 }}
+                whileTap={isPaused ? {} : { scale: 0.97 }}
+                className="px-5 py-2 rounded-lg bg-[#f97316] text-white text-sm font-medium hover:bg-[#ea6c10] transition-colors disabled:opacity-40 disabled:pointer-events-none"
               >
                 Jeu suivant ✓
               </motion.button>
@@ -346,6 +390,23 @@ export default function ChallengeMode({ session, history, gameAttempts, onNextGa
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+function PauseIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+      <rect x="6" y="4" width="4" height="16" rx="1" />
+      <rect x="14" y="4" width="4" height="16" rx="1" />
+    </svg>
+  )
+}
+
+function PlayIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+      <path d="M7 4.5v15l13-7.5-13-7.5z" />
+    </svg>
   )
 }
 

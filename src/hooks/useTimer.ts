@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 
-export function useTimer(startedAt: string | null) {
+/** When pausedAt is set, elapsed freezes at (pausedAt - startedAt) instead of ticking against Date.now(). */
+export function useTimer(startedAt: string | null, pausedAt: string | null = null) {
   const [elapsed, setElapsed] = useState(0)
   const rafRef = useRef<number>(0)
 
@@ -12,6 +13,11 @@ export function useTimer(startedAt: string | null) {
 
     const start = new Date(startedAt).getTime()
 
+    if (pausedAt) {
+      setElapsed(Math.floor((new Date(pausedAt).getTime() - start) / 1000))
+      return
+    }
+
     const tick = () => {
       setElapsed(Math.floor((Date.now() - start) / 1000))
       rafRef.current = requestAnimationFrame(tick)
@@ -19,7 +25,7 @@ export function useTimer(startedAt: string | null) {
 
     rafRef.current = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [startedAt])
+  }, [startedAt, pausedAt])
 
   return elapsed
 }

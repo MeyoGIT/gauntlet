@@ -16,6 +16,7 @@ export interface GauntletSession {
   challenge_started_at: string | null
   current_run_started_at: string | null
   current_game_started_at: string | null
+  paused_at: string | null
   game_tries: number[]
   created_at: string
 }

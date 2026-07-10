@@ -125,11 +125,34 @@ export function useGauntlet() {
       current_run_number: 1,
       current_game_index: 0,
       game_tries: Array(session.games.length).fill(0),
+      paused_at: null,
     })
   }, [session, updateSession])
 
-  const nextGame = useCallback(async () => {
+  const togglePause = useCallback(async () => {
     if (!session) return
+    const now = new Date().toISOString()
+
+    if (session.paused_at) {
+      // Resume: shift every running timestamp forward by the pause duration
+      // so all elapsed/duration calculations (site, OBS, game_attempts, run_history)
+      // stay correct without ever needing to know about pauses themselves.
+      const pauseMs = new Date(now).getTime() - new Date(session.paused_at).getTime()
+      const shift = (ts: string | null) => ts ? new Date(new Date(ts).getTime() + pauseMs).toISOString() : ts
+
+      await updateSession({
+        paused_at: null,
+        challenge_started_at: shift(session.challenge_started_at),
+        current_run_started_at: shift(session.current_run_started_at),
+        current_game_started_at: shift(session.current_game_started_at),
+      })
+    } else {
+      await updateSession({ paused_at: now })
+    }
+  }, [session, updateSession])
+
+  const nextGame = useCallback(async () => {
+    if (!session || session.paused_at) return
     const now = new Date().toISOString()
     const gameStart = session.current_game_started_at ?? session.current_run_started_at ?? session.challenge_started_at ?? now
     const game = session.games[session.current_game_index]
@@ -162,7 +185,7 @@ export function useGauntlet() {
   }, [session, updateSession, loadGameAttempts])
 
   const failRun = useCallback(async () => {
-    if (!session) return
+    if (!session || session.paused_at) return
     const now = new Date().toISOString()
     const runStart = session.current_run_started_at ?? session.challenge_started_at ?? now
     const gameStart = session.current_game_started_at ?? runStart
@@ -221,10 +244,11 @@ export function useGauntlet() {
       current_run_started_at: null,
       current_game_started_at: null,
       game_tries: Array(10).fill(0),
+      paused_at: null,
     })
     setHistory([])
     setGameAttempts([])
   }, [session, updateSession])
 
-  return { session, history, gameAttempts, loading, error, createSession, updateGames, startChallenge, nextGame, failRun, adjustTries, resetChallenge }
+  return { session, history, gameAttempts, loading, error, createSession, updateGames, startChallenge, nextGame, failRun, adjustTries, resetChallenge, togglePause }
 }

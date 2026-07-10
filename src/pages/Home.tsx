@@ -20,6 +20,7 @@ export default function Home() {
     failRun,
     adjustTries,
     resetChallenge,
+    togglePause,
   } = useGauntlet()
 
   if (loading) {
@@ -107,6 +108,7 @@ export default function Home() {
               onFailRun={failRun}
               onAdjustTries={adjustTries}
               onReset={resetChallenge}
+              onTogglePause={togglePause}
             />
           </motion.div>
         )}

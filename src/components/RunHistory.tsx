@@ -7,7 +7,9 @@ interface Props {
 }
 
 export default function RunHistory({ history, session }: Props) {
-  if (history.length === 0) return null
+  if (history.length === 0) {
+    return <p className="text-sm text-[#6b6b6b] py-3">Aucune run terminée pour l'instant.</p>
+  }
 
   return (
     <div className="divide-y divide-[#2a2a2a]">
